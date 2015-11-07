@@ -1,5 +1,6 @@
 # Phaser.gauge
 Phaser.js で動作するゲージプラグインです。
+
 ![スクリーンショット](https://github.com/heporap/Phaser.gauge/blob/master/screenshot.png)
 
 ## properties
