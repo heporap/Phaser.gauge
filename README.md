@@ -30,12 +30,13 @@ gauge.reset(gauge.value);
 imgBG、imgOn、imgOffはpreloadで読み込んだ画像のキーを指定します。画像が指定されていると色指定は使用されません。
 画像サイズと width 、height 指定が異なる場合は、width 、height に合わせて拡大されます。
 
-### autoPlay(fn, thisObject, to, duration, totally)
+### autoPlay(fn, thisObj, to, duration, totally, blink)
 - fn: コールバック関数
 - thisObject: コールバック関数内でthisにマッピングされるオブジェクト
 - to: valueを変更する値
 - duration: 指定ミリ秒
 - totally: trueならdurationは0からmaxまでかかる時間を示す。falseならdurationの時間でvalueからtoまで変更する。
+- blink: 点滅間隔。デフォルトは0（点滅なし）
 
 ### stopPlay()
 再生を止めます。

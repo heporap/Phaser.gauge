@@ -1,7 +1,7 @@
 /**
 * @author       Wataru Kanzaki <dab@wi-wi.jp>
 * @copyright    2015 Wicker Wings
-* @version      1.0.0
+* @version      1.1.0
 * @license      {@link https://github.com/heporap/Phaser.gauge/blob/master/LICENSE.txt|MIT License}
 */
 (function(constructor){
@@ -18,7 +18,7 @@
 }).call(this, function(Phaser){
 "use strict";
 
-var _extends = window._extends || function(dest, src, defaultValues){
+var _extends = function(dest, src, defaultValues){
 	if( typeof defaultValues !== 'undefined' ){
 		for( var key in defaultValues ){
 			if( defaultValues.hasOwnProperty(key) ){
@@ -77,15 +77,11 @@ Phaser.Plugin.Gauge.prototype.init = function(world){
 
 /****
 Phaser.Plugin.Gauge.prototype.setup
-@param metrics {object} - x, y, width, height, baseColor = "#888", radius = 5, borderColor = "#8f8", borderWidth = 2, img = ''
-@param indicator {object} - color = "#FF0", imgOff, imgOn, grow = "slide", max = 100
-@param label {object} - color = "#0FF", font, ext = "%", useLabel = true, align = "center", valign = "top"
+@param metrics {object} - x:0, y:0, width:200, height:30, imgBG:null, borderWidth:0, borderColor:'rgba(0,0,255,1)', bgColor:'rgba(255,255,255,1)'
+@param indicator {object} - x:1, y:5, value:0, max:10, width:18, height:20, imgOn:null, imgOff:null, margin:2, colorOn:'rgba(255,0,0,1)', colorOff:'rgba(0,201,0,1)'
+@param label {object} - (reserved parameter)
 @param options {object} - (reserved parameter)
-
-* enumerates
-label.align = "center", "left", "right"
-label.valign = "top", "bottom", "left", "right", "pile"
-
+@return {object} - this
 ****/
 Phaser.Plugin.Gauge.prototype.setup = function(metrics, indicator, label, options){
 	
@@ -182,9 +178,10 @@ autoPlay
 @param to {number: Gauge.max} - toで指定された値まで増減する。
 @param duration {number: 10000} - 再生時間。
 @param totally {boolean: true} - trueならdurationは0からmaxまでの時間を示し、falseなら現在のvalueから0またはmaxまでの時間を示す。
+@param blink {number: 0} - 点滅間隔。
 @return {object} - this。
 ****/
-Phaser.Plugin.Gauge.prototype.autoPlay = function(fn, thisObj, to, duration, totally){
+Phaser.Plugin.Gauge.prototype.autoPlay = function(fn, thisObj, to, duration, totally, blink){
 	
 	if( this.busy ){
 		return this;
@@ -196,6 +193,11 @@ Phaser.Plugin.Gauge.prototype.autoPlay = function(fn, thisObj, to, duration, tot
 	this._callback = fn;
 	
 	this._duration = duration || 10000;
+	
+	blink = blink || 0;
+	this._blinkInterval = (blink==='fast')? 300: (blink==='slow')? 600: blink;
+	this._blinkPassedTime = 0;
+	this._blinkLighting = true;
 	
 	this._startValue = this.value;
 	this._goalValue = (typeof to === 'undefined' || this.max < to)? this.max: (to < 0)? 0: isNaN(to)? this.max: +to;
@@ -220,6 +222,8 @@ Phaser.Plugin.Gauge.prototype.autoPlay = function(fn, thisObj, to, duration, tot
 };
 
 /****
+stopPlay
+自動再生を停止する
 ****/
 Phaser.Plugin.Gauge.prototype.stopPlay = function(){
 	this._autoPlay = false;
@@ -227,40 +231,43 @@ Phaser.Plugin.Gauge.prototype.stopPlay = function(){
 };
 
 /****
+increment
+インジケーターを増やす
+@param count {number: 1}
+return {number} - 新しく設定された数値
 ****/
 Phaser.Plugin.Gauge.prototype.increment = function(count){
 	if( !count || count < 1 ){
 		count = 1;
 	}
 	
-	this.value += count;
-	if( this.max < this.value ){
-		this.value = this.max;
-	}
-	
-	this.draw();
+	this.reset(this.value+count);
 	
 	return this.value;
 };
 
 /****
+decrement
+インジケーターを減らす
+@param count {number: 1}
+return {number} - 新しく設定された数値
 ****/
 Phaser.Plugin.Gauge.prototype.decrement = function(count){
 	if( !count || 1 < count ){
 		count = 1;
 	}
 	
-	this.value -= count;
-	if( this.value < 0 ){
-		this.value = 0;
-	}
-	this.draw();
+	this.reset(this.value - count);
 	
 	return this.value;
 	
 };
 
 /****
+reset
+インジケーター数を指定する
+@param count {number: 1}
+return {number} - 新しく設定された数値
 ****/
 Phaser.Plugin.Gauge.prototype.reset = function(count){
 	if( !count || count < 0 ){
@@ -278,6 +285,35 @@ Phaser.Plugin.Gauge.prototype.reset = function(count){
 };
 
 /****
+blink
+diffValueで指定されたインジケーターを点滅させる
+@param diffValue {number}
+****/
+Phaser.Plugin.Gauge.prototype.blink = function(diffValue){
+	
+	this._blinkPassedTime += this.game.time.physicsElapsedMS;
+	
+	if( this._blinkPassedTime < this._blinkInterval ){
+		return;
+	}
+	
+	this._blinkPassedTime = 0;
+	this._blinkLighting = !this._blinkLighting;
+	
+	var value = this.value,
+		idctr = this.indicator, w = idctr.width, h = idctr.height, wm = w + idctr.margin,
+		i, x = idctr.x, y = idctr.y, img,
+		bmd = this.baseBMD;
+	for( i = 0; i < this.max; i++, x += wm ){
+		img = (i === diffValue )? (this._blinkLighting)? idctr.imgOn: idctr.imgOff: ( i < value )? idctr.imgOn: idctr.imgOff
+		bmd.draw(img, x, y, w, h);
+	}
+	
+};
+
+/****
+update
+システムからの呼び出し
 ****/
 Phaser.Plugin.Gauge.prototype.update = function(game){
 	
@@ -295,10 +331,14 @@ Phaser.Plugin.Gauge.prototype.update = function(game){
 			
 			var val = sv + (gv - sv) * percent;
 			
-			val = (gv === 0 )? Math.ceil(val): Math.floor(val);
+			val = (gv < sv )? Math.ceil(val): Math.floor(val);;
 			
 			if( val !== this.value ){
 				this.reset(val);
+				
+			}else if(this._blinkInterval){
+				this.blink( (gv < sv )? val - 1: val );
+				
 			}
 		}
 		
@@ -316,6 +356,10 @@ Phaser.Plugin.Gauge.prototype.update = function(game){
 	
 };
 
+/****
+postUpdate
+システムからの呼び出し
+****/
 Phaser.Plugin.Gauge.prototype.postUpdate = function(){
 	
 	this.world.bringToTop(this.baseGroup);
