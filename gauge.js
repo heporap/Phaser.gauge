@@ -7,7 +7,7 @@
 (function(constructor){
 	var root = this;
 	
-	if( define && define.amd ){
+	if( typeof define !== 'undefined' && define.amd ){
 		define('gauge', ['Phaser'], constructor);
 		
 	}else if( root.Phaser ){
